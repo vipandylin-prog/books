@@ -147,17 +147,7 @@
       white-space: nowrap;
     }
     .book-isbn { font-family: monospace; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.5rem; }
-    .book-meta { font-size: 0.875rem; color: #4b5563; margin-bottom: 0.375rem; }
-    .condition-tag {
-      display: inline-block;
-      background-color: #fef3c7;
-      color: #92400e;
-      font-size: 0.75rem;
-      font-weight: 500;
-      padding: 0.125rem 0.5rem;
-      border-radius: 0.25rem;
-      margin-top: 0.25rem;
-    }
+    .book-meta { font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem; }
     .book-footer {
       border-top: 1px solid #e5e7eb;
       padding-top: 0.75rem;
@@ -206,8 +196,7 @@
         <input type="text" id="book-isbn" placeholder="ISBN 書號 (選填，例如: 9789861234567)">
         <input type="text" id="book-course" placeholder="適用課程 / 科系 (必填，例如: 資管系-微積分)" required>
         <input type="number" id="book-price" placeholder="價格 (必填，免費交換請填 0)" required>
-        <select id="book-condition" required>
-          <option value="" disabled selected>-- 請選擇詳細書況 (必填) --</option>
+        <select id="book-condition">
           <option value="全新未拆（附封膜）">全新未拆（附封膜）</option>
           <option value="近全新（僅翻閱，無任何畫記）">近全新（僅翻閱，無任何畫記）</option>
           <option value="九成新（極少量鉛筆畫記，可擦除）">九成新（極少量鉛筆畫記，可擦除）</option>
@@ -250,6 +239,7 @@
     let currentUser = JSON.parse(localStorage.getItem('campus_book_user') || 'null');
     let allBooks = [];
 
+    // 更新導覽列與表單顯示狀態
     function updateAuthUI() {
       const authSection = document.getElementById('auth-section');
       const loginBox = document.getElementById('login-box');
@@ -273,4 +263,216 @@
           <button id="btn-show-login" class="btn-white">登入 / 註冊</button>
         `;
         document.getElementById('btn-show-login').addEventListener('click', () => {
-          loginBox.class
+          loginBox.classList.toggle('hidden');
+        });
+        postBox.classList.add('hidden');
+      }
+    }
+
+    // 註冊新帳號 (Firebase Auth REST API)
+    document.getElementById('btn-register').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email.endsWith('.edu.tw')) {
+        alert("請使用台灣大專院校信箱 (.edu.tw) 註冊！");
+        return;
+      }
+
+      try {
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || "註冊失敗");
+
+        currentUser = { uid: data.localId, email: data.email, idToken: data.idToken };
+        localStorage.setItem('campus_book_user', JSON.stringify(currentUser));
+        alert("註冊並登入成功！");
+        updateAuthUI();
+        renderBooks();
+      } catch (err) {
+        alert("註冊失敗：" + err.message);
+      }
+    });
+
+    // 登入帳號 (Firebase Auth REST API)
+    document.getElementById('btn-login').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error("帳號或密碼錯誤");
+
+        currentUser = { uid: data.localId, email: data.email, idToken: data.idToken };
+        localStorage.setItem('campus_book_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        renderBooks();
+      } catch (err) {
+        alert("登入失敗：" + err.message);
+      }
+    });
+
+    // 讀取所有書籍 (Firestore REST API)
+    async function loadBooks() {
+      try {
+        const res = await fetch(`${FIRESTORE_URL}/books?pageSize=300`);
+        const data = await res.json();
+        if (!data.documents) {
+          allBooks = [];
+        } else {
+          allBooks = data.documents.map(doc => {
+            const f = doc.fields || {};
+            const id = doc.name.split('/').pop();
+            return {
+              id: id,
+              title: f.title?.stringValue || '',
+              isbn: f.isbn?.stringValue || '',
+              course: f.course?.stringValue || '',
+              price: Number(f.price?.integerValue || f.price?.doubleValue || 0),
+              condition: f.condition?.stringValue || '',
+              contact: f.contact?.stringValue || '',
+              status: f.status?.stringValue || 'available',
+              ownerId: f.ownerId?.stringValue || '',
+              createdAt: Number(f.createdAt?.integerValue || 0)
+            };
+          }).filter(book => book.status === 'available');
+          allBooks.sort((a, b) => b.createdAt - a.createdAt);
+        }
+        renderBooks();
+      } catch (err) {
+        document.getElementById('book-list').innerHTML = `<p class="empty-msg">載入書籍失敗，請重新整理頁面。</p>`;
+      }
+    }
+
+    // 上架書籍 (Firestore REST API)
+    document.getElementById('book-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return alert("請先登入！");
+
+      const payload = {
+        fields: {
+          title: { stringValue: document.getElementById('book-title').value.trim() },
+          isbn: { stringValue: document.getElementById('book-isbn').value.trim() },
+          course: { stringValue: document.getElementById('book-course').value.trim() },
+          price: { integerValue: String(Number(document.getElementById('book-price').value)) },
+          condition: { stringValue: document.getElementById('book-condition').value },
+          contact: { stringValue: document.getElementById('book-contact').value.trim() },
+          status: { stringValue: "available" },
+          ownerId: { stringValue: currentUser.uid },
+          ownerEmail: { stringValue: currentUser.email },
+          createdAt: { integerValue: String(Date.now()) }
+        }
+      };
+
+      try {
+        const res = await fetch(`${FIRESTORE_URL}/books`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.idToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error?.message || "權限不足或登入已過期，請重新登入");
+        }
+        document.getElementById('book-form').reset();
+        alert("書籍已成功上架！");
+        await loadBooks();
+      } catch (err) {
+        alert("上架失敗：" + err.message);
+      }
+    });
+
+    // 下架書籍 (Firestore REST API PATCH)
+    window.takeDownBook = async (bookId) => {
+      if (!currentUser) return alert("請先登入！");
+      if (!confirm("確定要下架這本書嗎？下架後將不再顯示於書單中。")) return;
+
+      try {
+        const res = await fetch(`${FIRESTORE_URL}/books/${bookId}?updateMask.fieldPaths=status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.idToken}`
+          },
+          body: JSON.stringify({
+            fields: { status: { stringValue: "sold" } }
+          })
+        });
+        if (!res.ok) throw new Error("權限不足或登入已過期，請重新登入再試");
+        alert("書籍已成功下架！");
+        await loadBooks();
+      } catch (err) {
+        alert("下架失敗：" + err.message);
+      }
+    };
+
+    // 防 XSS 跳脫字元
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    // 渲染書籍卡片
+    function renderBooks() {
+      const listEl = document.getElementById('book-list');
+      const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+      const cleanKeyword = keyword.replace(/-/g, '');
+      const onlyMine = document.getElementById('filter-mine').checked;
+
+      const filtered = allBooks.filter(book => {
+        const cleanIsbn = (book.isbn || '').toLowerCase().replace(/-/g, '');
+        const matchKeyword = book.title.toLowerCase().includes(keyword) ||
+                             book.course.toLowerCase().includes(keyword) ||
+                             (cleanKeyword && cleanIsbn.includes(cleanKeyword));
+        const matchOwner = onlyMine ? (currentUser && book.ownerId === currentUser.uid) : true;
+        return matchKeyword && matchOwner;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `<p class="empty-msg">目前沒有符合條件的書籍。</p>`;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(book => {
+        const isOwner = currentUser && book.ownerId === currentUser.uid;
+        return `
+          <div class="book-card">
+            <div>
+              <div class="book-header">
+                <h3 class="book-title">${escapeHtml(book.title)}</h3>
+                <span class="price-badge">${book.price === 0 ? '免費交換' : '$' + book.price}</span>
+              </div>
+              ${book.isbn ? `<p class="book-isbn">🔢 ISBN：${escapeHtml(book.isbn)}</p>` : ''}
+              <p class="book-meta">📖 適用課程：${escapeHtml(book.course)}</p>
+              <p class="book-meta">✨ 書況：${escapeHtml(book.condition)}</p>
+            </div>
+            <div class="book-footer">
+              <span>聯絡：${escapeHtml(book.contact)}</span>
+              ${isOwner ? `<button onclick="takeDownBook('${book.id}')" class="btn-danger">下架書籍</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 初始化
+    document.getElementById('search-input').addEventListener('input', renderBooks);
+    document.getElementById('filter-mine').addEventListener('change', renderBooks);
+    updateAuthUI();
+    loadBooks();
+  </script>
+</body>
+</html>
