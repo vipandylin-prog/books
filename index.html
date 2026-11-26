@@ -4,236 +4,470 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>校園二手書交換平台</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 純原生手寫 CSS，零外部套件 */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f9fafb;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    .hidden { display: none !important; }
+
+    /* 導覽列 */
+    nav {
+      background-color: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .nav-container {
+      max-width: 1152px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .nav-title { font-size: 1.25rem; font-weight: bold; letter-spacing: 0.05em; }
+    .auth-area { display: flex; align-items: center; gap: 0.75rem; }
+    .user-email { font-size: 0.875rem; }
+
+    /* 按鈕樣式 */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      padding: 0.5rem 1rem;
+      transition: background-color 0.2s;
+    }
+    .btn-white { background-color: #ffffff; color: #4f46e5; font-weight: bold; }
+    .btn-white:hover { background-color: #f3f4f6; }
+    .btn-dark-indigo { background-color: #3730a3; color: #ffffff; }
+    .btn-dark-indigo:hover { background-color: #312e81; }
+    .btn-primary { background-color: #4f46e5; color: #ffffff; width: 100%; }
+    .btn-primary:hover { background-color: #4338ca; }
+    .btn-secondary { background-color: #e5e7eb; color: #1f2937; width: 100%; }
+    .btn-secondary:hover { background-color: #d1d5db; }
+    .btn-success { background-color: #16a34a; color: #ffffff; font-weight: bold; width: 100%; padding: 0.625rem; }
+    .btn-success:hover { background-color: #15803d; }
+    .btn-danger { background-color: #ef4444; color: #ffffff; font-size: 0.75rem; padding: 0.375rem 0.75rem; }
+    .btn-danger:hover { background-color: #dc2626; }
+
+    /* 主容器與卡片 */
+    main { max-width: 1152px; margin: 0 auto; padding: 2rem 1rem; }
+    .card-box {
+      background-color: #ffffff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+    .login-box { max-width: 448px; margin-left: auto; margin-right: auto; }
+    .box-title { font-size: 1.125rem; font-weight: bold; margin-bottom: 1rem; }
+    .box-title-border { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+    .hint-text { font-size: 0.75rem; color: #6b7280; margin-bottom: 1rem; text-align: center; }
+
+    /* 表單元素 */
+    input[type="text"], input[type="email"], input[type="password"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      font-size: 0.95rem;
+      background-color: #ffffff;
+    }
+    input:focus, select:focus { outline: 2px solid #4f46e5; border-color: transparent; }
+    .stack-3 > * + * { margin-top: 0.75rem; }
+    .btn-row { display: flex; gap: 0.5rem; }
+
+    /* 刊登表單網格 */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 768px) {
+      .form-grid { grid-template-columns: repeat(2, 1fr); }
+      .col-span-2 { grid-column: span 2; }
+    }
+
+    /* 搜尋列 */
+    .search-bar {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+    }
+    @media (min-width: 640px) {
+      .search-bar { flex-direction: row; }
+      .search-input { width: 384px !important; }
+    }
+    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer; }
+
+    /* 書籍展示網格 */
+    .book-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    @media (min-width: 640px) { .book-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .book-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .book-card {
+      background-color: #ffffff;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid #f3f4f6;
+      transition: box-shadow 0.2s;
+    }
+    .book-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .book-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .book-title { font-weight: bold; font-size: 1.125rem; color: #111827; }
+    .price-badge {
+      background-color: #e0e7ff;
+      color: #3730a3;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.125rem 0.625rem;
+      border-radius: 0.25rem;
+      white-space: nowrap;
+    }
+    .book-isbn { font-family: monospace; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.5rem; }
+    .book-meta { font-size: 0.875rem; color: #4b5563; margin-bottom: 0.25rem; }
+    .book-footer {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 0.75rem;
+      margin-top: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .empty-msg { grid-column: 1 / -1; text-align: center; color: #6b7280; padding: 2.5rem 0; }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body>
 
   <!-- 頂部導覽列 -->
-  <nav class="bg-indigo-600 text-white shadow-md">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-xl font-bold tracking-wider">📚 校園二手書交換平台</h1>
-      <div id="auth-section" class="flex items-center gap-3"></div>
+  <nav>
+    <div class="nav-container">
+      <h1 class="nav-title">📚 校園二手書交換平台</h1>
+      <div id="auth-section" class="auth-area"></div>
     </div>
   </nav>
 
   <!-- 主內容區 -->
-  <main class="max-w-6xl mx-auto px-4 py-8">
+  <main>
     
     <!-- 登入 / 註冊區塊 -->
-    <div id="login-box" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-      <h2 class="text-lg font-bold mb-4 text-center">學生帳號登入 / 註冊</h2>
-      <p class="text-xs text-gray-500 mb-4 text-center">請使用學校信箱 (.edu.tw) 註冊以確保校園交易安全</p>
-      <div class="space-y-3">
-        <input type="email" id="email" placeholder="學校信箱 (例如: s1101234@nkust.edu.tw)" class="w-full border p-2 rounded">
-        <input type="password" id="password" placeholder="密碼 (至少 6 位數)" class="w-full border p-2 rounded">
-        <div class="flex gap-2">
-          <button id="btn-login" class="w-1/2 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">登入</button>
-          <button id="btn-register" class="w-1/2 bg-gray-200 text-gray-800 py-2 rounded hover:bg-gray-300">註冊新帳號</button>
+    <div id="login-box" class="card-box login-box hidden">
+      <h2 class="box-title" style="text-align:center;">學生帳號登入 / 註冊</h2>
+      <p class="hint-text">請使用學校信箱 (.edu.tw) 註冊以確保校園交易安全</p>
+      <div class="stack-3">
+        <input type="email" id="email" placeholder="學校信箱 (例如: s1101234@nkust.edu.tw)">
+        <input type="password" id="password" placeholder="密碼 (至少 6 位數)">
+        <div class="btn-row">
+          <button id="btn-login" class="btn-primary">登入</button>
+          <button id="btn-register" class="btn-secondary">註冊新帳號</button>
         </div>
       </div>
     </div>
 
     <!-- 刊登書籍表單 -->
-    <div id="post-box" class="bg-white p-6 rounded-lg shadow-md mb-8 hidden">
-      <h2 class="text-lg font-bold mb-4 border-b pb-2">➕ 刊登我的二手書</h2>
-      <form id="book-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input type="text" id="book-title" placeholder="書名 (必填)" required class="border p-2 rounded">
-        <input type="text" id="book-course" placeholder="適用課程 / 科系 (例如: 資管系-微積分)" required class="border p-2 rounded">
-        <input type="number" id="book-price" placeholder="價格 (元，免費交換請填 0)" required class="border p-2 rounded">
-        <select id="book-condition" class="border p-2 rounded">
+    <div id="post-box" class="card-box hidden">
+      <h2 class="box-title box-title-border">➕ 刊登我的二手書</h2>
+      <form id="book-form" class="form-grid">
+        <input type="text" id="book-title" placeholder="書名 (必填)" required>
+        <input type="text" id="book-isbn" placeholder="ISBN 書號 (選填，例如: 9789861234567)">
+        <input type="text" id="book-course" placeholder="適用課程 / 科系 (必填，例如: 資管系-微積分)" required>
+        <input type="number" id="book-price" placeholder="價格 (必填，免費交換請填 0)" required>
+        <select id="book-condition">
           <option value="全新未拆">全新未拆</option>
           <option value="九成新 (無畫記)">九成新 (無畫記)</option>
           <option value="七成新 (有重點筆記)">七成新 (有重點筆記)</option>
           <option value="有使用痕跡">有使用痕跡</option>
         </select>
-        <input type="text" id="book-contact" placeholder="聯絡方式 (LINE ID / IG / 學校信箱)" required class="border p-2 rounded md:col-span-2">
-        <button type="submit" class="md:col-span-2 bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">確認上架</button>
+        <input type="text" id="book-contact" placeholder="聯絡方式 (必填，LINE ID / IG / 學校信箱)" required>
+        <button type="submit" class="btn-success col-span-2">確認上架</button>
       </form>
     </div>
 
     <!-- 搜尋與篩選列 -->
-    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-      <input type="text" id="search-input" placeholder="🔍 搜尋書名、課程名稱或科系..." class="w-full sm:w-96 border p-2.5 rounded-lg shadow-sm bg-white">
-      <label class="flex items-center gap-2 text-sm cursor-pointer">
-        <input type="checkbox" id="filter-mine" class="rounded text-indigo-600">
+    <div class="search-bar">
+      <input type="text" id="search-input" class="search-input" placeholder="🔍 搜尋書名、ISBN 書號、課程或科系...">
+      <label class="checkbox-label">
+        <input type="checkbox" id="filter-mine">
         <span>只顯示我上架的書籍</span>
       </label>
     </div>
 
     <!-- 書籍展示網格 -->
-    <div id="book-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <p class="text-gray-500 col-span-full text-center py-10">載入書籍資料中...</p>
+    <div id="book-list" class="book-grid">
+      <p class="empty-msg">載入書籍資料中...</p>
     </div>
 
   </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  <script>
+    // ==========================================
+    // 純原生 JavaScript (使用瀏覽器內建 fetch 呼叫 Firebase REST API，零外部套件)
+    // ==========================================
+    const API_KEY = "AIzaSyDBIPy_zFtZYvUaykEWhIoJQZ5MhqjBbgE";
+    const PROJECT_ID = "books-be49f";
+    const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDBIPy_zFtZYvUaykEWhIoJQZ5MhqjBbgE",
-      authDomain: "books-be49f.firebaseapp.com",
-      projectId: "books-be49f",
-      storageBucket: "books-be49f.firebasestorage.app",
-      messagingSenderId: "650494434607",
-      appId: "1:650494434607:web:9fc18a52306d051c89d5da",
-      measurementId: "G-GPD6Q95YH3"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUser = null;
+    let currentUser = JSON.parse(localStorage.getItem('campus_book_user') || 'null');
     let allBooks = [];
 
-    onAuthStateChanged(auth, (user) => {
-      currentUser = user;
+    // 更新導覽列與表單顯示狀態
+    function updateAuthUI() {
       const authSection = document.getElementById('auth-section');
       const loginBox = document.getElementById('login-box');
       const postBox = document.getElementById('post-box');
 
-      if (user) {
+      if (currentUser) {
         authSection.innerHTML = `
-          <span class="text-sm hidden sm:inline">${user.email}</span>
-          <button id="btn-logout" class="bg-indigo-800 px-3 py-1.5 rounded text-sm hover:bg-indigo-900">登出</button>
+          <span class="user-email">${escapeHtml(currentUser.email)}</span>
+          <button id="btn-logout" class="btn-dark-indigo">登出</button>
         `;
-        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+        document.getElementById('btn-logout').addEventListener('click', () => {
+          currentUser = null;
+          localStorage.removeItem('campus_book_user');
+          updateAuthUI();
+          renderBooks();
+        });
         loginBox.classList.add('hidden');
         postBox.classList.remove('hidden');
       } else {
         authSection.innerHTML = `
-          <button id="btn-show-login" class="bg-white text-indigo-600 font-bold px-4 py-1.5 rounded text-sm hover:bg-gray-100">登入 / 註冊</button>
+          <button id="btn-show-login" class="btn-white">登入 / 註冊</button>
         `;
         document.getElementById('btn-show-login').addEventListener('click', () => {
           loginBox.classList.toggle('hidden');
         });
         postBox.classList.add('hidden');
       }
-      renderBooks();
-    });
+    }
 
+    // 註冊新帳號 (Firebase Auth REST API)
     document.getElementById('btn-register').addEventListener('click', async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      
+
       if (!email.endsWith('.edu.tw')) {
         alert("請使用台灣大專院校信箱 (.edu.tw) 註冊！");
         return;
       }
 
       try {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || "註冊失敗");
+
+        currentUser = { uid: data.localId, email: data.email, idToken: data.idToken };
+        localStorage.setItem('campus_book_user', JSON.stringify(currentUser));
         alert("註冊並登入成功！");
-      } catch (error) {
-        alert("註冊失敗：" + error.message);
+        updateAuthUI();
+        renderBooks();
+      } catch (err) {
+        alert("註冊失敗：" + err.message);
       }
     });
 
+    // 登入帳號 (Firebase Auth REST API)
     document.getElementById('btn-login').addEventListener('click', async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
+
       try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        alert("登入失敗：請檢查帳號密碼是否正確");
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error("帳號或密碼錯誤");
+
+        currentUser = { uid: data.localId, email: data.email, idToken: data.idToken };
+        localStorage.setItem('campus_book_user', JSON.stringify(currentUser));
+        updateAuthUI();
+        renderBooks();
+      } catch (err) {
+        alert("登入失敗：" + err.message);
       }
     });
 
+    // 讀取所有書籍 (Firestore REST API)
+    async function loadBooks() {
+      try {
+        const res = await fetch(`${FIRESTORE_URL}/books?pageSize=300`);
+        const data = await res.json();
+        if (!data.documents) {
+          allBooks = [];
+        } else {
+          allBooks = data.documents.map(doc => {
+            const f = doc.fields || {};
+            const id = doc.name.split('/').pop();
+            return {
+              id: id,
+              title: f.title?.stringValue || '',
+              isbn: f.isbn?.stringValue || '',
+              course: f.course?.stringValue || '',
+              price: Number(f.price?.integerValue || f.price?.doubleValue || 0),
+              condition: f.condition?.stringValue || '',
+              contact: f.contact?.stringValue || '',
+              status: f.status?.stringValue || 'available',
+              ownerId: f.ownerId?.stringValue || '',
+              createdAt: Number(f.createdAt?.integerValue || 0)
+            };
+          }).filter(book => book.status === 'available');
+          allBooks.sort((a, b) => b.createdAt - a.createdAt);
+        }
+        renderBooks();
+      } catch (err) {
+        document.getElementById('book-list').innerHTML = `<p class="empty-msg">載入書籍失敗，請重新整理頁面。</p>`;
+      }
+    }
+
+    // 上架書籍 (Firestore REST API)
     document.getElementById('book-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!currentUser) return alert("請先登入！");
 
-      const newBook = {
-        title: document.getElementById('book-title').value.trim(),
-        course: document.getElementById('book-course').value.trim(),
-        price: Number(document.getElementById('book-price').value),
-        condition: document.getElementById('book-condition').value,
-        contact: document.getElementById('book-contact').value.trim(),
-        status: "available",
-        ownerId: currentUser.uid,
-        ownerEmail: currentUser.email,
-        createdAt: Date.now()
+      const payload = {
+        fields: {
+          title: { stringValue: document.getElementById('book-title').value.trim() },
+          isbn: { stringValue: document.getElementById('book-isbn').value.trim() },
+          course: { stringValue: document.getElementById('book-course').value.trim() },
+          price: { integerValue: String(Number(document.getElementById('book-price').value)) },
+          condition: { stringValue: document.getElementById('book-condition').value },
+          contact: { stringValue: document.getElementById('book-contact').value.trim() },
+          status: { stringValue: "available" },
+          ownerId: { stringValue: currentUser.uid },
+          ownerEmail: { stringValue: currentUser.email },
+          createdAt: { integerValue: String(Date.now()) }
+        }
       };
 
       try {
-        await addDoc(collection(db, "books"), newBook);
+        const res = await fetch(`${FIRESTORE_URL}/books`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.idToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error?.message || "權限不足或登入已過期，請重新登入");
+        }
         document.getElementById('book-form').reset();
         alert("書籍已成功上架！");
-      } catch (error) {
-        alert("上架失敗：" + error.message);
+        await loadBooks();
+      } catch (err) {
+        alert("上架失敗：" + err.message);
       }
     });
 
+    // 下架書籍 (Firestore REST API PATCH)
     window.takeDownBook = async (bookId) => {
+      if (!currentUser) return alert("請先登入！");
       if (!confirm("確定要下架這本書嗎？下架後將不再顯示於書單中。")) return;
+
       try {
-        const bookRef = doc(db, "books", bookId);
-        await updateDoc(bookRef, { status: "sold" });
+        const res = await fetch(`${FIRESTORE_URL}/books/${bookId}?updateMask.fieldPaths=status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentUser.idToken}`
+          },
+          body: JSON.stringify({
+            fields: { status: { stringValue: "sold" } }
+          })
+        });
+        if (!res.ok) throw new Error("權限不足或登入已過期，請重新登入再試");
         alert("書籍已成功下架！");
-      } catch (error) {
-        alert("下架失敗（權限不足或網路錯誤）：" + error.message);
+        await loadBooks();
+      } catch (err) {
+        alert("下架失敗：" + err.message);
       }
     };
 
-    const q = query(collection(db, "books"), where("status", "==", "available"));
-    onSnapshot(q, (snapshot) => {
-      allBooks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      allBooks.sort((a, b) => b.createdAt - a.createdAt);
-      renderBooks();
-    });
+    // 防 XSS 跳脫字元
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
 
+    // 渲染書籍卡片
     function renderBooks() {
       const listEl = document.getElementById('book-list');
-      const keyword = document.getElementById('search-input').value.toLowerCase();
+      const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+      const cleanKeyword = keyword.replace(/-/g, '');
       const onlyMine = document.getElementById('filter-mine').checked;
 
       const filtered = allBooks.filter(book => {
-        const matchKeyword = book.title.toLowerCase().includes(keyword) || book.course.toLowerCase().includes(keyword);
+        const cleanIsbn = (book.isbn || '').toLowerCase().replace(/-/g, '');
+        const matchKeyword = book.title.toLowerCase().includes(keyword) ||
+                             book.course.toLowerCase().includes(keyword) ||
+                             (cleanKeyword && cleanIsbn.includes(cleanKeyword));
         const matchOwner = onlyMine ? (currentUser && book.ownerId === currentUser.uid) : true;
         return matchKeyword && matchOwner;
       });
 
       if (filtered.length === 0) {
-        listEl.innerHTML = `<p class="text-gray-500 col-span-full text-center py-10">目前沒有符合條件的書籍。</p>`;
+        listEl.innerHTML = `<p class="empty-msg">目前沒有符合條件的書籍。</p>`;
         return;
       }
 
       listEl.innerHTML = filtered.map(book => {
         const isOwner = currentUser && book.ownerId === currentUser.uid;
-        
         return `
-          <div class="bg-white rounded-lg shadow p-5 flex flex-col justify-between border border-gray-100">
+          <div class="book-card">
             <div>
-              <div class="flex justify-between items-start gap-2 mb-2">
-                <h3 class="font-bold text-lg text-gray-900">${book.title}</h3>
-                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded shrink-0">
-                  ${book.price === 0 ? '免費交換' : '$' + book.price}
-                </span>
+              <div class="book-header">
+                <h3 class="book-title">${escapeHtml(book.title)}</h3>
+                <span class="price-badge">${book.price === 0 ? '免費交換' : '$' + book.price}</span>
               </div>
-              <p class="text-sm text-gray-600 mb-1">📖 適用課程：${book.course}</p>
-              <p class="text-sm text-gray-600 mb-3">✨ 書況：${book.condition}</p>
+              ${book.isbn ? `<p class="book-isbn">🔢 ISBN：${escapeHtml(book.isbn)}</p>` : ''}
+              <p class="book-meta">📖 適用課程：${escapeHtml(book.course)}</p>
+              <p class="book-meta">✨ 書況：${escapeHtml(book.condition)}</p>
             </div>
-            
-            <div class="border-t pt-3 mt-2 flex justify-between items-center">
-              <div class="text-xs text-gray-500">
-                <p>聯絡：${book.contact}</p>
-              </div>
-              ${isOwner ? `
-                <button onclick="takeDownBook('${book.id}')" class="bg-red-500 text-white text-xs px-3 py-1.5 rounded hover:bg-red-600 transition">
-                  下架書籍
-                </button>
-              ` : ''}
+            <div class="book-footer">
+              <span>聯絡：${escapeHtml(book.contact)}</span>
+              ${isOwner ? `<button onclick="takeDownBook('${book.id}')" class="btn-danger">下架書籍</button>` : ''}
             </div>
           </div>
         `;
       }).join('');
     }
 
+    // 初始化
     document.getElementById('search-input').addEventListener('input', renderBooks);
     document.getElementById('filter-mine').addEventListener('change', renderBooks);
+    updateAuthUI();
+    loadBooks();
   </script>
 </body>
 </html>
