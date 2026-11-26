@@ -106,9 +106,7 @@
       .search-bar { flex-direction: row; }
       .search-input { width: 384px !important; }
     }
-    .filter-group { display: flex; align-items: center; gap: 1rem; font-size: 0.875rem; }
-    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
-    .count-badge { color: #4f46e5; font-weight: bold; }
+    .checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer; }
 
     /* 書籍展示網格 */
     .book-grid {
@@ -217,13 +215,10 @@
     <!-- 搜尋與篩選列 -->
     <div class="search-bar">
       <input type="text" id="search-input" class="search-input" placeholder="🔍 搜尋書名、ISBN 書號、課程或科系...">
-      <div class="filter-group">
-        <span id="book-count" class="count-badge">共 0 本書</span>
-        <label class="checkbox-label">
-          <input type="checkbox" id="filter-mine">
-          <span>只顯示我上架的書籍</span>
-        </label>
-      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="filter-mine">
+        <span>只顯示我上架的書籍</span>
+      </label>
     </div>
 
     <!-- 書籍展示網格 -->
@@ -235,141 +230,11 @@
 
   <script>
     // ==========================================
-    // 純原生 JavaScript (零外部套件)
+    // 純原生 JavaScript (使用瀏覽器內建 fetch 呼叫 Firebase REST API，零外部套件)
     // ==========================================
     const API_KEY = "AIzaSyDBIPy_zFtZYvUaykEWhIoJQZ5MhqjBbgE";
     const PROJECT_ID = "books-be49f";
     const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-
-    const CONDITIONS = [
-      "全新未拆（附封膜）",
-      "近全新（僅翻閱，無任何畫記）",
-      "九成新（極少量鉛筆畫記，可擦除）",
-      "八成新（有重點螢光筆 / 原子筆筆記）",
-      "七成新（重點筆記豐富，適合考前衝刺）",
-      "習題 / 歷屆試題已寫（含解答筆跡）",
-      "六成新（封面有摺痕或書角微損，內頁完整）",
-      "五成新（有泛黃、水漬或書背磨損，不影響閱讀）",
-      "缺頁 / 裝訂鬆脫（請於聯絡時確認細節）"
-    ];
-
-    // 內建 100 本校園教科書資料 [書名, ISBN, 適用課程, 價格]
-    const RAW_100_BOOKS = [
-      ["微積分 (Calculus) - James Stewart", "9781285741550", "共同必修-微積分", 350],
-      ["商用微積分 - Hoffmann", "9780073532387", "商管學院-微積分", 300],
-      ["普通物理學 (Halliday)", "9781119460138", "工學院-普通物理", 450],
-      ["大學物理學 (University Physics)", "9780135159552", "電機系-普通物理", 400],
-      ["普通化學 (Brown)", "9780134414232", "化材系-普通化學", 380],
-      ["基礎化學 (Nivaldo J. Tro)", "9780134302386", "環安系-化學", 250],
-      ["普通生物學 (Campbell Biology)", "9780135188743", "生科系-普通生物", 500],
-      ["基礎統計學 (Triola)", "9780134462455", "共同必修-統計學", 280],
-      ["商用統計學 (Anderson)", "9781337901062", "財管系-統計學", 320],
-      ["線性代數 (Howard Anton)", "9781118473504", "資工系-線性代數", 300],
-      ["線性代數導論 (Gilbert Strang)", "9780980232776", "應數系-線性代數", 350],
-      ["工程數學 (Erwin Kreyszig)", "9780470458365", "電機/機械-工程數學", 480],
-      ["離散數學 (Kenneth Rosen)", "9781259676512", "資工系-離散數學", 360],
-      ["機率論 (Sheldon Ross)", "9780134753119", "通訊系-機率與統計", 290],
-      ["大學國文選", "9789861110011", "通識教育-國文", 100],
-      ["憲法與立國精神", "9789571198765", "通識教育-憲法", 80],
-      ["心理學導論 (Kalat)", "9780357370728", "通識教育-心理學", 220],
-      ["社會學 (Anthony Giddens)", "9781509539222", "通識教育-社會學", 250],
-      ["邏輯與批判性思考", "9789571461234", "通識教育-邏輯", 120],
-      ["環境科學概論", "9781337569613", "通識教育-環境科學", 150],
-      ["C 語言程式設計教學 (Deitel)", "9780133976892", "資工/資管-程式設計", 300],
-      ["C++ 程式設計藝術 (Deitel)", "9780134448237", "電資學院-物件導向", 320],
-      ["Python 程式設計入門與應用", "9789864769872", "通識/資管-Python", 200],
-      ["Java 程式設計 (Y. Daniel Liang)", "9780134670942", "資管系-Java程式設計", 350],
-      ["資料結構：使用 C 語言 (Horowitz)", "9780929306407", "資工系-資料結構", 280],
-      ["資料結構與演算法：Python 實作", "9789865024567", "資管系-資料結構", 250],
-      ["演算法導論 (CLRS)", "9780262046305", "資工系-演算法", 550],
-      ["作業系統概念 (恐龍本)", "9781119800361", "資工系-作業系統", 450],
-      ["計算機組織與設計 (算盤本)", "9780128201091", "資工系-計算機組織", 420],
-      ["計算機結構 (Hennessy)", "9780128119051", "資工所-計算機結構", 480],
-      ["資料庫系統理論 (Silberschatz)", "9780078022159", "資工/資管-資料庫", 380],
-      ["資料庫系統之理論與實務 - 陳會安", "9789863126543", "資管系-資料庫管理", 220],
-      ["計算機網路 (Kurose & Ross)", "9780136681557", "資工系-計算機網路", 400],
-      ["資料通訊與網路 (Forouzan)", "9780073376226", "通訊/資管-網路概論", 340],
-      ["軟體工程 (Ian Sommerville)", "9780133943030", "資工系-軟體工程", 310],
-      ["系統分析與設計 (Alan Dennis)", "9781119496489", "資管系-系統分析", 290],
-      ["管理資訊系統 (Laudon)", "9780136971276", "資管系-MIS", 350],
-      ["人工智慧導論 (Russell & Norvig)", "9780134610993", "資工系-人工智慧", 460],
-      ["機器學習 (Tom M. Mitchell)", "9780070428072", "AI學程-機器學習", 320],
-      ["深度學習 (Ian Goodfellow)", "9780262035613", "AI學程-深度學習", 400],
-      ["網頁程式設計：HTML5, CSS3, JS", "9789865028763", "資管系-網頁設計", 180],
-      ["Linux 鳥哥的私房菜：基礎學習篇", "9789863479116", "資工/網管-Linux", 250],
-      ["資訊安全概論 (Whitman)", "9781337568470", "資安學程-資安導論", 280],
-      ["物件導向分析與設計 (UML)", "9780131489066", "資工/資管-軟體設計", 260],
-      ["人機互動設計 (Interaction Design)", "9781119547259", "數位設計/資管-UIUX", 240],
-      ["電路學 (Alexander & Sadiku)", "9781260570793", "電機/電子-電路學", 420],
-      ["基本電學 (Boylestad)", "9780133923605", "電機系-基本電學", 350],
-      ["電子學 (Sedra & Smith 聖經本)", "9780190853464", "電機/電子-電子學", 500],
-      ["電子學 (Boylestad)", "9780132622264", "光電/通訊-電子學", 380],
-      ["數位邏輯設計 (M. Morris Mano)", "9780134549897", "電機/資工-邏輯設計", 340],
-      ["邏輯設計 (Charles H. Roth)", "9781337620352", "電子系-數位系統", 310],
-      ["訊號與系統 (Oppenheim)", "9780138147570", "電機/通訊-訊號與系統", 430],
-      ["電磁學 (David K. Cheng)", "9780201128192", "電機/通訊-電磁學", 390],
-      ["工程電磁學 (William H. Hayt)", "9780078028151", "電子系-電磁學", 360],
-      ["控制系統工程 (Norman S. Nise)", "9781119474227", "電機/機械-自動控制", 410],
-      ["自動控制系統 (Richard C. Dorf)", "9780134407623", "機電系-控制系統", 370],
-      ["半導體物理與元件 (Neamen)", "9780073529585", "電子/半導體-元件物理", 440],
-      ["超大型積體電路設計 (CMOS VLSI)", "9780321547743", "電子所-IC設計", 460],
-      ["電力系統分析 (Hadi Saadat)", "9780984543809", "電機系-電力系統", 350],
-      ["電機機械 (Chapman)", "9780073529547", "電機系-電機機械", 380],
-      ["通訊系統 (Simon Haykin)", "9780471697909", "通訊系-通訊原理", 400],
-      ["數位訊號處理 (Proakis)", "9780131873742", "電機/通訊-DSP", 420],
-      ["微處理機原理與應用 (8051)", "9780130195623", "電子/機電-微處理機", 250],
-      ["嵌入式系統設計", "9780123821966", "資工/電子-嵌入式系統", 280],
-      ["光電工程導論 (S. O. Kasap)", "9780132151498", "光電系-光電導論", 340],
-      ["經濟學原理 (Mankiw)", "9780357038314", "商管學院-經濟學", 380],
-      ["個體經濟學 (Pindyck)", "9780134184241", "經濟/財金-個體經濟", 350],
-      ["總體經濟學 (Mankiw)", "9781319105990", "經濟/財金-總體經濟", 350],
-      ["初級會計學 (Weygandt)", "9781119491057", "會計/財管-初會", 360],
-      ["中級會計學 (Kieso)", "9781119503682", "會計系-中會", 480],
-      ["成本與管理會計 (Horngren)", "9780135628478", "會計系-成管會", 420],
-      ["管理學 (Stephen P. Robbins)", "9780135581735", "企管/運籌-管理學", 320],
-      ["組織行為學 (Robbins)", "9780134729329", "企管/人資-組織行為", 300],
-      ["行銷管理 (Philip Kotler)", "9780135887158", "行銷/企管-行銷學", 360],
-      ["財務管理 (Brigham)", "9781337395250", "財管/金融-財務管理", 380],
-      ["公司理財 (Stephen A. Ross)", "9781260013870", "財金系-公司理財", 400],
-      ["投資學 (Bodie, Kane)", "9781260013832", "金融/財管-投資學", 410],
-      ["貨幣銀行學 (Mishkin)", "9780134733821", "金融系-貨幣銀行學", 370],
-      ["作業管理 (Heizer & Render)", "9780135173626", "工管/運籌-作業管理", 340],
-      ["供應鏈管理 (Sunil Chopra)", "9780134731889", "運籌/國企-供應鏈", 330],
-      ["人力資源管理 (Gary Dessler)", "9780135172780", "人資/企管-人資管理", 290],
-      ["策略管理 (Fred R. David)", "9780135173947", "企管系-策略管理", 310],
-      ["商事法概要 - 劉連煜", "9789575114321", "商管學院-商事法", 240],
-      ["民法概要 - 王澤鑑", "9789574187654", "法律/商管-民法概要", 260],
-      ["國際貿易實務 - 張錦源", "9789571465432", "國企系-國貿實務", 220],
-      ["工程力學：靜力學 (Hibbeler)", "9780134814971", "機械/土木-靜力學", 360],
-      ["工程力學：動力學 (Hibbeler)", "9780134814988", "機械/土木-動力學", 360],
-      ["材料力學 (Hibbeler)", "9780134319650", "機械/土木-材料力學", 390],
-      ["流體力學 (Frank M. White)", "9781260575545", "機械/造船-流體力學", 410],
-      ["熱力學 (Yunus A. Cengel)", "9781259822674", "機械/輪機-熱力學", 420],
-      ["熱傳學 (Incropera)", "9781119320425", "機械系-熱傳學", 400],
-      ["機械設計 (Shigley's)", "9780073398211", "機械系-機械設計", 450],
-      ["工程圖學與 AutoCAD 實務", "9789865031234", "機械/土木-工程圖學", 200],
-      ["製造程序 (Kalpakjian)", "9780135228609", "機械/工管-製造程序", 370],
-      ["品質管理 (James R. Evans)", "9780357442036", "工管系-品質管理", 290],
-      ["結構學 (Hibbeler)", "9780134612300", "土木/營建-結構學", 380],
-      ["鋼筋混凝土設計 (Darwin)", "9780133485967", "土木/營建-RC設計", 400],
-      ["土壤力學 (Braja M. Das)", "9781305970939", "土木/營建-土壤力學", 360],
-      ["新制多益 TOEIC 題庫解析", "9789864540679", "外語中心-英文檢定", 250],
-      ["大家的日本語 初級 I・II", "9789863210870", "應日系/第二外語-日文", 220]
-    ];
-
-    // 轉換內建 100 本書格式
-    const BUILTIN_BOOKS = RAW_100_BOOKS.map((item, idx) => ({
-      id: `builtin_${idx + 1}`,
-      title: item[0],
-      isbn: item[1],
-      course: item[2],
-      price: item[3],
-      condition: CONDITIONS[idx % CONDITIONS.length],
-      contact: `LINE: campus_book_${String(idx + 1).padStart(3, '0')}`,
-      status: "available",
-      ownerId: "system_builtin",
-      createdAt: 1700000000000 - idx * 1000
-    }));
 
     let currentUser = JSON.parse(localStorage.getItem('campus_book_user') || 'null');
     let allBooks = [];
@@ -404,7 +269,7 @@
       }
     }
 
-    // 註冊新帳號
+    // 註冊新帳號 (Firebase Auth REST API)
     document.getElementById('btn-register').addEventListener('click', async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -433,7 +298,7 @@
       }
     });
 
-    // 登入帳號
+    // 登入帳號 (Firebase Auth REST API)
     document.getElementById('btn-login').addEventListener('click', async () => {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
@@ -456,14 +321,15 @@
       }
     });
 
-    // 讀取資料庫書籍並合併內建 100 本書
+    // 讀取所有書籍 (Firestore REST API)
     async function loadBooks() {
-      let dbBooks = [];
       try {
         const res = await fetch(`${FIRESTORE_URL}/books?pageSize=300`);
         const data = await res.json();
-        if (data.documents) {
-          dbBooks = data.documents.map(doc => {
+        if (!data.documents) {
+          allBooks = [];
+        } else {
+          allBooks = data.documents.map(doc => {
             const f = doc.fields || {};
             const id = doc.name.split('/').pop();
             return {
@@ -479,17 +345,15 @@
               createdAt: Number(f.createdAt?.integerValue || 0)
             };
           }).filter(book => book.status === 'available');
-          dbBooks.sort((a, b) => b.createdAt - a.createdAt);
+          allBooks.sort((a, b) => b.createdAt - a.createdAt);
         }
+        renderBooks();
       } catch (err) {
-        console.warn("讀取遠端資料庫失敗，僅顯示內建書單");
+        document.getElementById('book-list').innerHTML = `<p class="empty-msg">載入書籍失敗，請重新整理頁面。</p>`;
       }
-      // 將使用者新上架的書籍排在最前面，接著顯示內建 100 本書
-      allBooks = [...dbBooks, ...BUILTIN_BOOKS];
-      renderBooks();
     }
 
-    // 上架書籍
+    // 上架書籍 (Firestore REST API)
     document.getElementById('book-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!currentUser) return alert("請先登入！");
@@ -530,7 +394,7 @@
       }
     });
 
-    // 下架書籍
+    // 下架書籍 (Firestore REST API PATCH)
     window.takeDownBook = async (bookId) => {
       if (!currentUser) return alert("請先登入！");
       if (!confirm("確定要下架這本書嗎？下架後將不再顯示於書單中。")) return;
@@ -564,7 +428,6 @@
     // 渲染書籍卡片
     function renderBooks() {
       const listEl = document.getElementById('book-list');
-      const countEl = document.getElementById('book-count');
       const keyword = document.getElementById('search-input').value.toLowerCase().trim();
       const cleanKeyword = keyword.replace(/-/g, '');
       const onlyMine = document.getElementById('filter-mine').checked;
@@ -577,8 +440,6 @@
         const matchOwner = onlyMine ? (currentUser && book.ownerId === currentUser.uid) : true;
         return matchKeyword && matchOwner;
       });
-
-      countEl.textContent = `共 ${filtered.length} 本書`;
 
       if (filtered.length === 0) {
         listEl.innerHTML = `<p class="empty-msg">目前沒有符合條件的書籍。</p>`;
